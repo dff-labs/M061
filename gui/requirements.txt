@@ -1,3 +1,0 @@
-pyyaml
-redis
-pyside2 # for host
