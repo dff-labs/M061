@@ -1,4 +1,4 @@
-# OpenVentAid Ventilator [![Build Status](https://travis-ci.org/mzahmi/ventilator.svg?branch=master)](https://travis-ci.org/mzahmi/ventilator)
+# NEFAS [![Build Status](https://travis-ci.org/dff-labs/nefas.svg?branch=master)](https://travis-ci.org/mzahmi/ventilator)
 
 ## Install
 
