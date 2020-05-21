@@ -1,0 +1,5 @@
+package controlsystem
+
+func Control() {
+
+}
