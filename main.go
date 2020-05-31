@@ -56,7 +56,17 @@ func main() {
 		Password: "",
 		DB:       0,
 	})
-	_, err := client.Ping().Result()
+	
+    _, err := client.Ping().Result()
+    for {
+        if err == nil {
+            break
+        }
+        time.Sleep(1000 * time.Millisecond)
+        _, err = client.Ping().Result()
+        fmt.Println("\r- Trying to connect to redis server")
+    }
+    
 	check(err, logStruct)
 	logStruct.Event("Client Initialized")
 	// logger.Println("Client Initialized")
