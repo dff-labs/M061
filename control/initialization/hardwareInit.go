@@ -1,19 +1,19 @@
 package initialization
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/mzahmi/ventilator/control/adc"
 	"github.com/mzahmi/ventilator/control/dac"
 	"github.com/mzahmi/ventilator/control/ioexp"
 	"github.com/mzahmi/ventilator/control/rpigpio"
+	log "github.com/sirupsen/logrus"
 )
 
 //InitHardware ... this function should be called at the beginning of main.
 //It will initialize all the hardware and check for errors
 func HardwareInit() {
-	fmt.Println("Beginning hardware initialization")
+	log.Info("Beginning hardware initialization")
 
 	//I2C init
 	initI2C()
@@ -22,32 +22,32 @@ func HardwareInit() {
 	//init DAC
 	initDAC()
 
-	fmt.Println("End of hardware initialization")
+	log.Info("End of hardware initialization")
 
 }
 
 //initI2C ... this function initializes I2C and checks for errors
 //initI2C ... this function initializes I2C and checks for errors
 func initI2C() {
-	fmt.Println("Starting I2C init")
+	log.Info("Starting I2C init")
 	err := ioexp.InitChip()
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 		return
 	}
 	//Beep test
-	fmt.Println("beep called")
+	log.Debug("Beep called")
 	for ii := 0; ii < 3; ii++ {
 
 		err = rpigpio.BeepOn()
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			return
 		}
 		time.Sleep(50 * time.Millisecond)
 		err = rpigpio.BeepOff()
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			return
 		}
 
@@ -56,58 +56,58 @@ func initI2C() {
 
 	//testing LEDs
 	const blinkTime = 200
-	fmt.Println("Blinking LEDs")
+	log.Debug("Blinking LEDs")
 	for ii := 0; ii < 2; ii++ {
 
-		fmt.Println("Yellow")
+		log.Debug("Yellow")
 		err := ioexp.WritePin(ioexp.YellowLed, true)
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			return
 		}
 		time.Sleep(blinkTime * time.Millisecond)
 		err = ioexp.WritePin(ioexp.YellowLed, false)
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			return
 		}
 
-		fmt.Println("Red")
+		log.Debug("Red")
 		err = ioexp.WritePin(ioexp.RedLed, true)
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			return
 		}
 		time.Sleep(blinkTime * time.Millisecond)
 		err = ioexp.WritePin(ioexp.RedLed, false)
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			return
 		}
 
-		fmt.Println("Green")
+		log.Debug("Green")
 		err = ioexp.WritePin(ioexp.GreenLed, true)
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			return
 		}
 		time.Sleep(blinkTime * time.Millisecond)
 		err = ioexp.WritePin(ioexp.GreenLed, false)
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			return
 		}
 
-		fmt.Println("Blue")
+		log.Debug("Blue")
 		err = ioexp.WritePin(ioexp.BlueLed, true)
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			return
 		}
 		time.Sleep(blinkTime * time.Millisecond)
 		err = ioexp.WritePin(ioexp.BlueLed, false)
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			return
 		}
 	}
@@ -116,11 +116,11 @@ func initI2C() {
 //initADC ... this function initializes ADC and checks for errors
 func initADC() {
 
-	fmt.Println("readAdc called")
+	log.Debug("readAdc called")
 
 	_, err := adc.ReadADC(1)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 		return
 	}
 
@@ -129,10 +129,10 @@ func initADC() {
 //initDAC ... this function initializes DAC and checks for errors
 func initDAC() {
 
-	fmt.Println("dacsZero called")
+	log.Debug("dacsZero called")
 	err := dac.DacsAllZeroOut()
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 	}
 
 }
