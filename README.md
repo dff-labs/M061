@@ -6,7 +6,7 @@ This is the code for the [Dubai Future Foundation Open Source Ventilator](https:
 
 This project drives the main ventilator hardware, and is written in Go. 
 
-A GUI is implemented in Python-QT, and can be imported as a submodule from https://gitlab.com/ralsuwaidi/new-ui.
+A GUI implemented in Python-QT is available as a separate project at https://gitlab.com/dff-labs/M061-gui.
 
 The overall application architecture is as follows:
 * Ventilator (hardware) is accessed via a number of sensors talking I2C and SPI, accessed via GPIO 
@@ -15,11 +15,12 @@ The overall application architecture is as follows:
 
 Yes, we probably need a pretty diagram for this. That will come soon!
 
-The project (including the submodules) use the following technologies:
+The project overall uses the following technologies:
+
 * Golang    - the core application talking to the sensors is written in Go
 * Redis     - to store data from the sensors
 * Python    - for reading and processing data
-* PySide2 (QT) - for the GUI
+* PySide2   - This is the QT implementation used for the GUI
 
 ## Development 
 
@@ -57,11 +58,6 @@ Check that redis is running:
     PONG
     127.0.0.1:6379> 
 
-This project has submodule dependencies, which can be fetched via:
-
-    git submodule init
-    git submodule update
-
 ### Building and Running
 
 A number of go-related dependcies are necessary to run the project. These should automatically be fetched by `go run`:
@@ -97,5 +93,4 @@ This will produce a `ventilator` binary, which you can run as:
 ## The GUI
 
 The Python QT GUI for this application is under the gui/ folder, which is loaded as a submodule. Please refer to the [M061-Gui project](https://github.com/dff-labs/M061-gui) for more details. 
-
 
