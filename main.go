@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -18,7 +19,9 @@ import (
 	"github.com/mzahmi/ventilator/control/valves"
 	"github.com/mzahmi/ventilator/logger"
 	"github.com/mzahmi/ventilator/params"
+
 	// "github.com/mzahmi/ventilator/control/alarms"
+	log "github.com/sirupsen/logrus"
 )
 
 var UI = params.DefaultParams
@@ -33,7 +36,7 @@ func main() {
 	// //Creates log file called Events.log
 	// f, err := os.OpenFile("file.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	// if err != nil {
-	// 	fmt.Println(err)
+	// 	fmt.Println(errng)
 	// }
 	// defer f.Close()
 
@@ -42,8 +45,19 @@ func main() {
 	// logErr := log.New(f, "Error ", log.LstdFlags) // errors logger
 	// logArm := log.New(f, "Alarm ", log.LstdFlags) // alarms logger
 
+	// Initialize Logger
 	logStruct := logger.LoggerInit()
 	defer logger.LoggerClose()
+
+	// Let's create some command-line arguments to avoid the default hard-coded entries
+	redisAddressDefault := "dupl1.local:6379"
+
+	redisAddressPtr := flag.String("redis-addr", redisAddressDefault, "a string formatted as hostname:port")
+	redisPasswordPtr := flag.String("redis-password", "", "a string")
+	redisDBPtr := flag.Int("redis-db", 0, "an int")
+	// If you opt to use github.com/go-redis/v8 then, then you can enable username for auth
+	// redisUsernamePtr := flag.String("redis-username", "", "a string")
+	flag.Parse() // Flags can now be used in the program
 
 	//initialize the hardware
 	initialization.HardwareInit()
@@ -51,34 +65,37 @@ func main() {
 	//logger.Println("Hardware Initialized")
 
 	//establish connection with redis client
-	client := redis.NewClient(&redis.Options{
-		Addr:     "dupi1.local:6379",
-		Password: "",
-		DB:       0,
+	log.Info(fmt.Sprintf("%s: %s (DB=%d)..", "Trying to connect to redis server: ", *redisAddressPtr, *redisAddressPtr))
+	redis_client := redis.NewClient(&redis.Options{
+		// Addr:     "dupi1.local:6379",
+		Addr:     *redisAddressPtr,
+		Password: *redisPasswordPtr,
+		// Username: *redisUsernamePtr,
+		DB: *redisDBPtr,
 	})
-	
-    _, err := client.Ping().Result()
-    for {
-        if err == nil {
-            break
-        }
-        time.Sleep(1000 * time.Millisecond)
-        _, err = client.Ping().Result()
-        fmt.Println("\r- Trying to connect to redis server")
-    }
-    
+
+	_, err := redis_client.Ping().Result()
+	for {
+		if err == nil {
+			break
+		}
+		time.Sleep(1000 * time.Millisecond)
+		_, err = redis_client.Ping().Result()
+		log.Info("\r- Trying to connect to redis server: ", *redisAddressPtr)
+	}
+
 	check(err, logStruct)
-	logStruct.Event("Client Initialized")
+	logStruct.Event("Redis Client Initialized")
 	// logger.Println("Client Initialized")
 
 	// set the critical records in redis to zero or NA
-	client.Set("status", "NA", 0).Err()
-	client.Set("pressure", 0, 0).Err()
-	client.Set("volume", 0, 0).Err()
-	client.Set("flow", 0, 0).Err()
+	redis_client.Set("status", "NA", 0).Err()
+	redis_client.Set("pressure", 0, 0).Err()
+	redis_client.Set("volume", 0, 0).Err()
+	redis_client.Set("flow", 0, 0).Err()
 
 	//initialize the user input parameters
-	params.InitParams(client)
+	params.InitParams(redis_client)
 	logStruct.Event("Parameters Initialized")
 	//logger.Println("Parameters Initialized")
 
@@ -118,8 +135,8 @@ func main() {
 			mux.Unlock()
 			runtime.Gosched()
 			//sends the pressure reading from Pin to GUI
-			client.Set("pressure", (Pin-calP)*1020, 0).Err()
-			client.Set("flow", (Fin)*100, 0).Err()
+			redis_client.Set("pressure", (Pin-calP)*1020, 0).Err()
+			redis_client.Set("flow", (Fin)*100, 0).Err()
 			//fmt.Println(Pin*1020)
 			//calculates the delay based on a specified rate
 			loopTime := time.Since(t1)
@@ -134,7 +151,7 @@ func main() {
 	}()
 
 	//Airway pressure alarm check
-	// go alarms.AirwayPressureAlarms(&s, &mux, UI.UpperLimitPIP, UI.LowerLimitPIP, &logStruct, client)
+	// go alarms.AirwayPressureAlarms(&s, &mux, UI.UpperLimitPIP, UI.LowerLimitPIP, &logStruct, redis_client)
 
 	go func() {
 		for {
@@ -144,9 +161,9 @@ func main() {
 			runtime.Gosched()
 			if (airpress) >= 40 {
 				//msg := "Airway Pressure high"
-				client.Set("alarm_status", "critical", 0).Err()
-				client.Set("alarm_title", "Airway Pressure high", 0).Err()
-				client.Set("alarm_text", "Airway Pressure exceeded limits check for obstruction", 0).Err()
+				redis_client.Set("alarm_status", "critical", 0).Err()
+				redis_client.Set("alarm_title", "Airway Pressure high", 0).Err()
+				redis_client.Set("alarm_text", "Airway Pressure exceeded limits check for obstruction", 0).Err()
 				for ii := 0; ii < 5; ii++ {
 					err = rpigpio.BeepOn()
 					check(err, logStruct)
@@ -156,34 +173,34 @@ func main() {
 					time.Sleep(100 * time.Millisecond)
 				}
 			} else {
-				client.Set("alarm_status", "none", 0).Err()
+				redis_client.Set("alarm_status", "none", 0).Err()
 			}
 			time.Sleep(time.Millisecond * 100)
 		}
 	}()
 
 	// Provides CLI interface
-	go cli.Run(&s, client, &mux)
+	go cli.Run(&s, redis_client, &mux)
 
 	//checks for sys interupt
 	SetupCloseHandler()
 
 	for {
-		status, err := client.Get("status").Result()
+		status, err := redis_client.Get("status").Result()
 		check(err, logStruct)
 		if status == "start" {
 			// logger.Printf("Ventilation status changed to %s\n", status)
 			logStruct.Event(fmt.Sprintf("Ventilation status changed to %s\n", status))
-			UI = params.ReadParams(client)
-			go modeselect.ModeSelection(&UI, &s, client, &mux, &logStruct)
-			client.Set("status", "ventilating", 0).Err()
+			UI = params.ReadParams(redis_client)
+			go modeselect.ModeSelection(&UI, &s, redis_client, &mux, &logStruct)
+			redis_client.Set("status", "ventilating", 0).Err()
 			// logger.Printf("Ventilation status changed to %s\n", status)
 			logStruct.Event(fmt.Sprintf("Ventilation status changed to %s\n", status))
 		} else if status == "stop" {
 			// logger.Println("Stopping system")
 			logStruct.Event("Stopping system")
 			valves.CloseAllValves(&valves.MV, &valves.MExp, &valves.InProp)
-			// client.Set("status", "waiting", 0).Err()
+			// redis_client.Set("status", "waiting", 0).Err()
 		} else if status == "exit" {
 			// logger.Println("Exiting system")
 			logStruct.Event("Exiting system")
@@ -206,7 +223,7 @@ func SetupCloseHandler() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		fmt.Println("\r- Ctrl+C pressed in Terminal")
+		log.Info("\r- Ctrl+C pressed in Terminal")
 		valves.CloseAllValves(&valves.InProp, &valves.MExp, &valves.MV)
 		os.Exit(0)
 	}()
