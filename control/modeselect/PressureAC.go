@@ -69,7 +69,7 @@ func PressureControl(UI *params.UserInput, s *sensors.SensorsReading, client *re
 		var volume float32
 		valves.MV.Open()
 		valves.MExp.Close()
-		valves.InProp.IncrementValve(0.4)
+		valves.InProp.IncrementValve(0.35)
 		for start := time.Now(); time.Since(start) < (time.Duration(UI.Ti*1000) * time.Millisecond); {
 			tic := time.Now()
 			mux.Lock()
@@ -83,10 +83,8 @@ func PressureControl(UI *params.UserInput, s *sensors.SensorsReading, client *re
 			client.Set("volume", volume, 0).Err()
 		}
 		client.Set("volume", 0, 0).Err()
-
 		//Closes the inhalation MIns and InProp
-		//valves.MIns.Close()
-		valves.InProp.Close()
+		valves.MIns.Close()
 		valves.InProp.Close()
 		//Open main valve MExp controlled by pressure sensor PExp
 		// for start := time.Now(); time.Since(start) < (time.Duration(UI.Te*1000) * time.Millisecond); {
@@ -98,6 +96,7 @@ func PressureControl(UI *params.UserInput, s *sensors.SensorsReading, client *re
 		// 	// Open ExProp valve
 		// 	valves.MExp.Open()
 		// }
+		//valves.MV.Close()
 		valves.MExp.Open()
 		time.Sleep(time.Duration(UI.Te*1000) * time.Millisecond)
 		//Close main valve ExProp

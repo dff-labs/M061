@@ -66,7 +66,7 @@ func VolumeControl(UI *params.UserInput, s *sensors.SensorsReading, client *redi
 		}
 		//Close main valve MIns
 		client.Set("volume", 0, 0).Err()
-		valves.InProp.Close() // closes the valve
+		valves.MIns.Close() // closes the valve
 		valves.InProp.Close() // closes the valve
 		// time.Sleep(1*time.Millisecond)
 		//Open main valve MExp controlled by flow sensor PExp

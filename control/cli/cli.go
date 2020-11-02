@@ -14,6 +14,7 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/mzahmi/ventilator/control/sensors"
 	"github.com/mzahmi/ventilator/params"
+	"github.com/mzahmi/ventilator/control/valves"
 )
 
 func info() {
@@ -320,6 +321,8 @@ func Run(s *sensors.SensorsReading, client *redis.Client, mux *sync.Mutex) {
 		}
 
 		if words[0] == "q" {
+			valves.CloseAllValves(&valves.InProp, &valves.MExp, &valves.MV)
+			client.Set("alarm_status", "none", 0).Err()
 			os.Exit(0)
 			//break
 		}

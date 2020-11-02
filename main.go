@@ -128,9 +128,9 @@ func main() {
 			//locks the populating of the sensors struct
 			mux.Lock()
 			s = sensors.SensorsReading{
-				PressureInput:  (Pin - calP) * 1020,
+				PressureInput:  (Pin - calP) * 1020 ,
 				PressureOutput: Pout * 1020,
-				FlowInput:      Fin * 100,
+				FlowInput:      Fin * 70, // 100
 			}
 			mux.Unlock()
 			runtime.Gosched()
@@ -176,10 +176,7 @@ func main() {
 	go cli.Run(&s, redis_client, &mux)
 
 	//checks for sys interupt
-	SetupCloseHandler()
-
-	//Airway pressure alarm check
-	// go alarms.AirwayPressureAlarms(&s, &mux, UI.UpperLimitPIP, UI.LowerLimitPIP, &logStruct, redis_client)
+	SetupCloseHandler(client)
 
 	go func() {
 		for {
@@ -240,13 +237,14 @@ func check(err error, logStruct logger.Logging) {
 // SetupCloseHandler creates a 'listener' on a new goroutine which will notify the
 // program if it receives an interrupt from the OS. We then handle this by calling
 // our clean up procedure and exiting the program.
-func SetupCloseHandler() {
+func SetupCloseHandler(client *redis.Client) {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
 		log.Info("\r- Ctrl+C pressed in Terminal")
 		valves.CloseAllValves(&valves.InProp, &valves.MExp, &valves.MV)
+		client.Set("alarm_status", "none", 0).Err()
 		os.Exit(0)
 	}()
 }
