@@ -135,7 +135,7 @@ func main() {
 			mux.Unlock()
 			runtime.Gosched()
 			//sends the pressure reading from Pin to GUI
-			redis_client.Set("pressure", (Pin-calP)*1020, 0).Err()
+			redis_client.Set("pressure", (Pin-calP)*1020/2, 0).Err()
 			redis_client.Set("flow", (Fin)*100, 0).Err()
 			//fmt.Println(Pin*1020)
 			//calculates the delay based on a specified rate
@@ -150,6 +150,34 @@ func main() {
 		}
 	}()
 
+	go func() {
+		for {
+			valves.MV.Open()
+			valves.MExp.Open()
+			valves.InProp.IncrementValve(1.0)
+			time.Sleep(time.Millisecond * 2000)			
+			for ii := 0; ii < 1; ii++ {
+				err = rpigpio.BeepOn()
+				check(err, logStruct)
+				time.Sleep(100 * time.Millisecond)
+				err = rpigpio.BeepOff()
+				check(err, logStruct)
+				time.Sleep(100 * time.Millisecond)
+			}
+			valves.MV.Close()
+			valves.MExp.Close()
+			valves.InProp.IncrementValve(0.0)
+			valves.InProp.Close()
+			time.Sleep(time.Millisecond * 2000)
+		}
+	}()
+
+	// Provides CLI interface
+	go cli.Run(&s, redis_client, &mux)
+
+	//checks for sys interupt
+	SetupCloseHandler()
+
 	//Airway pressure alarm check
 	// go alarms.AirwayPressureAlarms(&s, &mux, UI.UpperLimitPIP, UI.LowerLimitPIP, &logStruct, redis_client)
 
@@ -159,7 +187,7 @@ func main() {
 			airpress := s.PressureInput
 			mux.Unlock()
 			runtime.Gosched()
-			if (airpress) >= 40 {
+			if (airpress) >= 60 {
 				//msg := "Airway Pressure high"
 				redis_client.Set("alarm_status", "critical", 0).Err()
 				redis_client.Set("alarm_title", "Airway Pressure high", 0).Err()
@@ -178,12 +206,6 @@ func main() {
 			time.Sleep(time.Millisecond * 100)
 		}
 	}()
-
-	// Provides CLI interface
-	go cli.Run(&s, redis_client, &mux)
-
-	//checks for sys interupt
-	SetupCloseHandler()
 
 	for {
 		status, err := redis_client.Get("status").Result()
